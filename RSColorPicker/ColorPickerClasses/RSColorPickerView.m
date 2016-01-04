@@ -15,7 +15,7 @@
 #import "RSGenerateOperation.h"
 #import "RSSelectionLayer.h"
 
-#define kSelectionViewSize 22
+#define kSelectionViewSize 16
 
 @interface RSColorPickerView () {
     struct {
@@ -31,6 +31,14 @@
  * padded by 1/2 the selectionViews's size.
  */
 @property (nonatomic) UIBezierPath *activeAreaShape;
+
+
+
+/**
+ * A path which represents the area where user cant pick color, calculated from excludedAreaFromCenter
+ */
+@property (nonatomic) UIBezierPath *noActiveAreaShape;
+
 
 
 /**
@@ -168,7 +176,8 @@
 
     self.contentsLayer.masksToBounds = YES;
     self.cropToCircle = NO;
-    self.selectionColor = [UIColor whiteColor];
+    self.selectionColor = [UIColor blueColor];
+    self.activeAreaFromEdge= 0.0f;
 }
 
 - (void)resizeOrRescale {
@@ -232,12 +241,16 @@
     [CATransaction setDisableActions:YES];
 
     CGRect activeAreaFrame = CGRectInset(self.bounds, self.paddingDistance, self.paddingDistance);
+    CGRect nonActiveAreaFrame = CGRectInset(self.bounds, self.paddingDistance+self.activeAreaFromEdge, self.paddingDistance+self.activeAreaFromEdge);
+    
     if (self.cropToCircle) {
         self.contentsLayer.cornerRadius = self.paletteDiameter / 2.0;
         self.activeAreaShape = [UIBezierPath bezierPathWithOvalInRect:activeAreaFrame];
+        self.noActiveAreaShape= [UIBezierPath bezierPathWithOvalInRect:nonActiveAreaFrame];
     } else {
         self.contentsLayer.cornerRadius = 0.0;
         self.activeAreaShape = [UIBezierPath bezierPathWithRect:activeAreaFrame];
+        self.noActiveAreaShape= [UIBezierPath bezierPathWithOvalInRect:nonActiveAreaFrame];
     }
 
     [CATransaction commit];
@@ -352,7 +365,7 @@
 #pragma mark - Touch Events -
 
 - (CGPoint)validPointForTouch:(CGPoint)touchPoint {
-    if ([self.activeAreaShape containsPoint:touchPoint]) {
+    if ([self.activeAreaShape containsPoint:touchPoint] && ![self.noActiveAreaShape containsPoint:touchPoint]) {
         return touchPoint;
     }
 
